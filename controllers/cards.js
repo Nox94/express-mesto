@@ -24,7 +24,7 @@ module.exports.createCard = (req, res) => {
 module.exports.deleteCardById = (req, res) => {
   const { cardId } = req.params;
   Card.findByIdAndRemove(cardId)
-    .orFail(new Error('invalidId'))
+    .orFail(new Error('NotFound'))
     .then((card) => res.send({ card }))
     .catch((err) => {
       if (err.name === 'CastError') {
@@ -45,7 +45,7 @@ module.exports.likeCard = (req, res) => {
   const { cardId } = req.params;
   const { _id } = req.user;
   Card.findByIdAndUpdate(cardId, { $addToSet: { likes: _id } }, { new: true })
-    .orFail(new Error('СastError'))
+    .orFail(new Error('NotFound'))
     .populate(['likes'])
     .then((card) => res.send(card))
     .catch((err) => {
@@ -69,7 +69,7 @@ module.exports.dislikeCard = (req, res) => {
     { $pull: { likes: req.user._id } },
     { new: true },
   )
-    .orFail(new Error('СastError'))
+    .orFail(new Error('NotFound'))
     .then((card) => res.send({ data: card }))
     .catch((err) => {
       if (err.name === 'CastError') {
@@ -80,8 +80,7 @@ module.exports.dislikeCard = (req, res) => {
         res.status(404).send({
           message: 'Карточка с указанным _id не найдена.',
         });
-      }
-      else {
+      } else {
         res.status(500).send({ message: 'Ошибка сервера.' });
       }
     });
