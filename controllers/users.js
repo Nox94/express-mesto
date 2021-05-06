@@ -96,38 +96,38 @@ module.exports.updateUsersAvatarById = (req, res) => {
         res.status(500).send({ message: 'Произошла ошибка.' });
       }
     });
+};
 
-  module.exports.login = (req, res) => {
-    const { NODE_ENV, JWT_SECRET } = process.env;
-    const { email, password } = req.body;
-    User.findOne({ email })
-      .then((user) => {
-        if (!user) {
-          return Promise.reject(new Error('Неправильные почта или пароль'));
-        }
-        return bcrypt.compare(password, user.password);
-      })
-      // eslint-disable-next-line consistent-return
-      .then((matched) => {
-        if (!matched) {
-          return Promise.reject(new Error('Неправильные почта или пароль'));
-        }
-        res.send({ message: 'Всё верно!' });
-      }).then((user) => {
-        const token = jwt.sign(
-          { _id: user._id },
-          NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret',
-          {
-            expiresIn: '7d',
-          },
-        );
-        res.cookie('jwt', token, {
-          httpOnly: true,
-          sameSite: true,
-        }).res.send({ _id: user._id });
-      })
-      .catch(() => {
-        res.status(401).send({ message: 'Ошибка авторизации: введены неверные учетные данные.' });
-      });
-  };
+module.exports.login = (req, res) => {
+  const { NODE_ENV, JWT_SECRET } = process.env;
+  const { email, password } = req.body;
+  User.findOne({ email })
+    .then((user) => {
+      if (!user) {
+        return Promise.reject(new Error('Неправильные почта или пароль'));
+      }
+      return bcrypt.compare(password, user.password);
+    })
+  // eslint-disable-next-line consistent-return
+    .then((matched) => {
+      if (!matched) {
+        return Promise.reject(new Error('Неправильные почта или пароль'));
+      }
+      res.send({ message: 'Всё верно!' });
+    }).then((user) => {
+      const token = jwt.sign(
+        { _id: user._id },
+        NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret',
+        {
+          expiresIn: '7d',
+        },
+      );
+      res.cookie('jwt', token, {
+        httpOnly: true,
+        sameSite: true,
+      }).res.send({ _id: user._id });
+    })
+    .catch(() => {
+      res.status(401).send({ message: 'Ошибка авторизации: введены неверные учетные данные.' });
+    });
 };
