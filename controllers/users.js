@@ -8,6 +8,16 @@ module.exports.getAllUsers = (req, res) => {
     .catch(() => res.status(500).send({ message: 'Произошла ошибка' }));
 };
 
+module.exports.getOneUser = (req, res, next) => User
+  .findOne({ _id: req.params.userId })
+  .then((user) => {
+    if (!user) {
+      throw new Error('Необходима авторизация.', 401);
+    }
+    res.send(user);
+  })
+  .catch(next);
+
 module.exports.getOneUserById = (req, res) => {
   User.findById(req.params.userId)
     .orFail(new Error('NoIdFound'))
@@ -102,6 +112,7 @@ module.exports.login = (req, res) => {
   const { NODE_ENV, JWT_SECRET } = process.env;
   const { email, password } = req.body;
   User.findOne({ email })
+    .select('+password')
     .then((user) => {
       if (!user) {
         return Promise.reject(new Error('Неправильные почта или пароль'));
@@ -121,7 +132,7 @@ module.exports.login = (req, res) => {
         NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret',
         {
           expiresIn: '7d',
-        },
+        }
       );
       res
         .cookie('jwt', token, {
@@ -132,10 +143,12 @@ module.exports.login = (req, res) => {
         .res.send({ _id: user._id });
     })
     .catch(() => {
-      res
-        .status(401)
-        .send({
-          message: 'Ошибка авторизации: введены неверные учетные данные.',
-        });
+      res.status(401).send({
+        message: 'Ошибка авторизации: введены неверные учетные данные.',
+      });
     });
+
+  module.exports.getUserInfo = (req, res) => {
+
+  };
 };

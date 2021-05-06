@@ -22,6 +22,7 @@
   "homepage": "https://github.com/yandex-praktikum/express-mesto#readme",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "celebrate": "^14.0.0",
     "cookieparser": "^0.1.0",
     "cookies": "^0.8.0",
     "dotenv": "^9.0.0",

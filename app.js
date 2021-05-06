@@ -17,13 +17,6 @@ mongoose.connect('mongodb://localhost:27017/mestodb', {
   useFindAndModify: false,
 });
 
-app.use((req, res, next) => {
-  req.user = {
-    _id: '608a668b730817901c9829dc', // _id п-ля
-  };
-
-  next();
-});
 app.use(cookieParser());
 app.post('/signin', login);
 app.post('/signup', createUser);

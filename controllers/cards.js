@@ -21,23 +21,33 @@ module.exports.createCard = (req, res) => {
       }
     });
 };
-module.exports.deleteCardById = (req, res) => {
+
+module.exports.deleteCard = (req, res) => {
   const { cardId } = req.params;
-  Card.findByIdAndRemove(cardId)
-    .orFail(new Error('NotFound'))
-    .then((card) => res.send({ card }))
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        res.status(400).send({
-          message: 'Переданы некорректные данные для удаления карточки.',
-        });
-      } else if (err.message === 'NotFound') {
-        res.status(404).send({
-          message: 'Карточка с указанным _id не найдена.',
-        });
-      } else {
-        res.status(500).send({ message: 'Ошибка сервера.' });
+  const userId = req.user._id;
+  Card.findById(cardId)
+    // eslint-disable-next-line consistent-return
+    .then((card) => {
+      if (card.owner._id !== userId) {
+        return Promise.reject(new Error('Вы можете удалить только свою карточку.', 400));
       }
+      Card.findByIdAndRemove(cardId)
+        .orFail(new Error('NotFound'))
+        // eslint-disable-next-line no-shadow
+        .then((card) => res.send({ card }))
+        .catch((err) => {
+          if (err.name === 'CastError') {
+            res.status(400).send({
+              message: 'Переданы некорректные данные для удаления карточки.',
+            });
+          } else if (err.message === 'NotFound') {
+            res.status(404).send({
+              message: 'Карточка с указанным _id не найдена.',
+            });
+          } else {
+            res.status(500).send({ message: 'Ошибка сервера.' });
+          }
+        });
     });
 };
 

@@ -2,7 +2,7 @@ const router = require('express').Router();
 const express = require('express');
 const {
   getAllCards,
-  deleteCardById,
+  deleteCard,
   createCard,
   likeCard,
   dislikeCard,
@@ -12,6 +12,6 @@ router.get('/', getAllCards);
 router.post('/', express.json(), createCard);
 router.put('/:cardId/likes', likeCard);
 router.delete('/:cardId/likes', dislikeCard);
-router.delete('/:cardId', deleteCardById);
+router.delete('/:cardId', deleteCard);
 
 module.exports = router;
