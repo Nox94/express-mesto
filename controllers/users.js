@@ -108,13 +108,14 @@ module.exports.login = (req, res) => {
       }
       return bcrypt.compare(password, user.password);
     })
-  // eslint-disable-next-line consistent-return
+    // eslint-disable-next-line consistent-return
     .then((matched) => {
       if (!matched) {
         return Promise.reject(new Error('Неправильные почта или пароль'));
       }
       res.send({ message: 'Всё верно!' });
-    }).then((user) => {
+    })
+    .then((user) => {
       const token = jwt.sign(
         { _id: user._id },
         NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret',
@@ -122,12 +123,19 @@ module.exports.login = (req, res) => {
           expiresIn: '7d',
         },
       );
-      res.cookie('jwt', token, {
-        httpOnly: true,
-        sameSite: true,
-      }).res.send({ _id: user._id });
+      res
+        .cookie('jwt', token, {
+          httpOnly: true,
+          sameSite: true,
+          expires: new Date(Date.now() + 604800),
+        })
+        .res.send({ _id: user._id });
     })
     .catch(() => {
-      res.status(401).send({ message: 'Ошибка авторизации: введены неверные учетные данные.' });
+      res
+        .status(401)
+        .send({
+          message: 'Ошибка авторизации: введены неверные учетные данные.',
+        });
     });
 };

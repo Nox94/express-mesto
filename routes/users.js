@@ -3,7 +3,6 @@ const express = require('express');
 const {
   getAllUsers,
   getOneUserById,
-  createUser,
   updateUsersAvatarById,
   updateUsersProfileById,
 } = require('../controllers/users');
