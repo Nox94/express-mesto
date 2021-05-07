@@ -147,8 +147,4 @@ module.exports.login = (req, res) => {
         message: 'Ошибка авторизации: введены неверные учетные данные.',
       });
     });
-
-  module.exports.getUserInfo = (req, res) => {
-
-  };
 };
