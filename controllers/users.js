@@ -1,43 +1,45 @@
+/* eslint-disable consistent-return */
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+const AuthError = require('../errors/AuthError');
+const CastError = require('../errors/CastError');
+const NoIdFoundError = require('../errors/NoIdFoundError');
+const RegisterError = require('../errors/RegisterError');
 
-module.exports.getAllUsers = (req, res) => {
+module.exports.getAllUsers = (req, res, next) => {
   User.find({})
     .then((users) => res.send({ data: users }))
-    .catch(() => res.status(500).send({ message: 'Произошла ошибка' }));
+    .catch(next);
 };
 
-module.exports.getOneUser = (req, res, next) => User
-  .findOne({ _id: req.params.userId })
+module.exports.getOneUser = (req, res, next) => User.findOne({ _id: req.user._id })
   .then((user) => {
     if (!user) {
-      throw new Error('Необходима авторизация.', 401);
+      throw new AuthError('Необходима авторизация.');
     }
     res.send(user);
   })
   .catch(next);
 
-module.exports.getOneUserById = (req, res) => {
+module.exports.getOneUserById = (req, res, next) => {
   User.findById(req.params.userId)
-    .orFail(new Error('NoIdFound'))
-    .then((user) => res.send({ data: user }))
+    .then((user) => {
+      if (!user) {
+        throw new CastError('Нет пользователя с таким id.');
+      }
+      res.send({ data: user });
+    })
     .catch((err) => {
-      if (err.name === 'CastError') {
-        res.status(400).send({
-          message: 'Переданы некорректные данные при запросе пользователя.',
-        });
-      } else if (err.message === 'NoIdFound') {
-        res.status(404).send({
-          message: 'Пользователь по указанному _id не найден.',
-        });
+      if (err.message === 'NoIdFound') {
+        next(new NoIdFoundError('Пользователь по указанному _id не найден.'));
       } else {
-        res.status(500).send({ message: 'Ошибка сервера.' });
+        next(err);
       }
     });
 };
 
-module.exports.createUser = (req, res) => {
+module.exports.createUser = (req, res, next) => {
   const {
     name, about, avatar, email, password,
   } = req.body;
@@ -49,102 +51,100 @@ module.exports.createUser = (req, res) => {
       avatar,
       email,
       password: hash, // хеш записан в базу
-    }))
-    .then((user) => res.send({ data: user }))
+    }).then((user) => res.status(201).send({ data: user })))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res.status(400).send({
-          message: 'Переданы некорректные данные при создании пользователя.',
-        });
+        next(new CastError('Переданы некорректные данные при создании пользователя.'));
+      } else if (err.name === 'MongoError' && err.code === 11000) {
+        next(new RegisterError('Пользователь с таким Email уже зарегистрирован.'));
       } else {
-        res.status(500).send({ message: 'Произошла ошибка.' });
+        next(err);
       }
     });
 };
 
-module.exports.updateUsersProfileById = (req, res) => {
+module.exports.updateUsersProfileById = (req, res, next) => {
   User.findByIdAndUpdate(
     req.user._id,
     { name: req.body.name, about: req.body.about },
     { new: true, runValidators: true },
   )
-    .orFail(new Error('NoIdFound'))
-    .then((user) => res.send({ data: user }))
-    .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(400).send({
-          message: 'Переданы некорректные данные при обновлении профиля.',
-        });
-      } else if (err.message === 'NoIdFound') {
-        res.status(404).send({
-          message: 'Пользователь по указанному _id не найден.',
-        });
-      } else {
-        res.status(500).send({ message: 'Произошла ошибка.' });
+    .then((user) => {
+      if (!user) {
+        throw new NoIdFoundError('Пользователь по указанному _id не найден.');
       }
+      res
+        .status(201)
+        .send({ data: user })
+        .catch((err) => {
+          if (err.name === 'ValidationError') {
+            next(new CastError('Переданы некорректные данные при обновлении профиля.'));
+          } else if (err.message === 'NoIdFound') {
+            next(new NoIdFoundError('Пользователь по указанному _id не найден.'));
+          } else {
+            next(err);
+          }
+        });
     });
 };
 
-module.exports.updateUsersAvatarById = (req, res) => {
+module.exports.updateUsersAvatarById = (req, res, next) => {
   User.findByIdAndUpdate(
     req.user._id,
     { avatar: req.body.avatar },
     { new: true, runValidators: true },
   )
-    .orFail(new Error('NoIdFound'))
-    .then((avatar) => res.send({ data: avatar }))
+    .then((avatar) => {
+      if (!avatar) {
+        throw new CastError('Переданы некорректные данные при обновлении аватара.');
+      }
+      res.status(201).send({ data: avatar });
+    })
     .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(400).send({
-          message: 'Переданы некорректные данные при обновлении аватара.',
-        });
-      } else if (err.message === 'NoIdFound') {
-        res.status(404).send({
-          message: 'Пользователь по указанному _id не найден.',
-        });
+      if (err.message === 'NoIdFound') {
+        next(new NoIdFoundError('Пользователь по указанному _id не найден.'));
       } else {
-        res.status(500).send({ message: 'Произошла ошибка.' });
+        next(err);
       }
     });
 };
 
-module.exports.login = (req, res) => {
+module.exports.login = (req, res, next) => {
   const { NODE_ENV, JWT_SECRET } = process.env;
   const { email, password } = req.body;
+
   User.findOne({ email })
     .select('+password')
     .then((user) => {
       if (!user) {
         return Promise.reject(new Error('Неправильные почта или пароль'));
       }
-      return bcrypt.compare(password, user.password);
+      bcrypt.compare(password, user.password)
+        // eslint-disable-next-line consistent-return
+        .then((matched) => { // boolean
+          if (!matched) {
+            return Promise.reject(new Error('Неправильные почта или пароль'));
+          }
+          const token = jwt.sign(
+            { _id: user._id },
+            NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret',
+            {
+              expiresIn: '7d',
+            },
+          );
+          res.cookie('jwt', token, {
+            httpOnly: true,
+            sameSite: true,
+            maxAge: 36000000 * 24 * 7,
+          })
+            .send({ _id: user._id });
+        });
     })
-    // eslint-disable-next-line consistent-return
-    .then((matched) => {
-      if (!matched) {
-        return Promise.reject(new Error('Неправильные почта или пароль'));
+    .catch((err) => { // eslint-disable-next-line consistent-return
+      if (err.name === 'ValidationError' || err.name === 'Error') {
+        next(new AuthError('Необходима авторизация.'));
+      } else {
+        next(err);
       }
-      res.send({ message: 'Всё верно!' });
-    })
-    .then((user) => {
-      const token = jwt.sign(
-        { _id: user._id },
-        NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret',
-        {
-          expiresIn: '7d',
-        }
-      );
-      res
-        .cookie('jwt', token, {
-          httpOnly: true,
-          sameSite: true,
-          expires: new Date(Date.now() + 604800),
-        })
-        .res.send({ _id: user._id });
-    })
-    .catch(() => {
-      res.status(401).send({
-        message: 'Ошибка авторизации: введены неверные учетные данные.',
-      });
     });
 };

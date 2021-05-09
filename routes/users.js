@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const express = require('express');
+const { celebrate, Joi } = require('celebrate');
 const {
   getAllUsers,
   getOneUser,
@@ -8,12 +9,45 @@ const {
   updateUsersProfileById,
 } = require('../controllers/users');
 
-router.get('/me', getOneUser);
 router.get('/', getAllUsers);
-router.get('/:userId', getOneUserById);
-router.patch('/me', express.json(), updateUsersProfileById);
-router.patch('/me/avatar', express.json(), updateUsersAvatarById);
+router.get('/me', getOneUser);
+
+router.get(
+  '/:userId',
+  celebrate({
+    params: Joi.object().keys({
+      userId: Joi.string().required().hex().length(24),
+    }),
+  }),
+  getOneUserById,
+);
+
+router.patch(
+  '/me',
+  express.json(),
+  celebrate({
+    body: Joi.object().keys({
+      name: Joi.string().required().min(2).max(30),
+      about: Joi.string().required().min(2).max(30),
+    }),
+  }),
+  updateUsersProfileById,
+);
+
+router.patch(
+  '/me/avatar',
+  express.json(),
+  celebrate({
+    body: Joi.object().keys({
+      avatar: Joi.string()
+        .required()
+        .pattern(
+          /^(https?:\/\/)(www\.)?([\da-z-.]+)\.([a-z.]{2,6})[\da-zA-Z-._~:?#[\]@!$&'()*+,;=/]*\/?#?$/,
+          'URL',
+        ),
+    }),
+  }),
+  updateUsersAvatarById,
+);
 
 module.exports = router;
-
-// _id: ObjectId("608a668b730817901c9829dc")

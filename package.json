@@ -21,10 +21,10 @@
   },
   "homepage": "https://github.com/yandex-praktikum/express-mesto#readme",
   "dependencies": {
+    "auth-token-express": "^1.0.4",
     "bcryptjs": "^2.4.3",
     "celebrate": "^14.0.0",
-    "cookieparser": "^0.1.0",
-    "cookies": "^0.8.0",
+    "cookie-parser": "^1.4.5",
     "dotenv": "^9.0.0",
     "express": "^4.17.1",
     "jsonwebtoken": "^8.5.1",

@@ -1,13 +1,7 @@
 const mongoose = require('mongoose');
-const validator = require('validator/lib/isEmail');
-
-// const validateEmail = function(email) {
-//     var emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-//     return emailRegex.test(email);
-// };
+const validator = require('validator');
 
 const userSchema = new mongoose.Schema({
-  // схема
   name: {
     type: String,
     minlength: 2,
@@ -24,6 +18,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     default:
       'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
+    validate: {
+      validator(url) {
+        return validator.isURL(url, {
+          require_protocol: true,
+        });
+      },
+      message: 'Введите корректные данные ссылки.',
+    },
   },
   email: {
     type: String,
@@ -34,10 +36,9 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true,
-    minlength: 8,
+    // minlength: 8,
     select: false,
   },
 });
-// модель на основе схемы
+
 module.exports = mongoose.model('user', userSchema);
-// два аргумента: имя модели и схема, которая описывает будущие документы
