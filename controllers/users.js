@@ -3,8 +3,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const AuthError = require('../errors/AuthError');
-const CastError = require('../errors/CastError');
-const NoIdFoundError = require('../errors/NoIdFoundError');
+const CastError = require('../errors/CastError');// 400
+const NoIdFoundError = require('../errors/NoIdFoundError');// 404
 const RegisterError = require('../errors/RegisterError');
 
 module.exports.getAllUsers = (req, res, next) => {
@@ -26,13 +26,13 @@ module.exports.getOneUserById = (req, res, next) => {
   User.findById(req.params.userId)
     .then((user) => {
       if (!user) {
-        throw new CastError('Нет пользователя с таким id.');
+        throw new NoIdFoundError('Пользователь по указанному id не найден.');
       }
       res.send({ data: user });
     })
     .catch((err) => {
       if (err.message === 'NoIdFound') {
-        next(new NoIdFoundError('Пользователь по указанному _id не найден.'));
+        next(new NoIdFoundError('Пользователь по указанному id не найден.'));
       } else {
         next(err);
       }
@@ -71,7 +71,7 @@ module.exports.updateUsersProfileById = (req, res, next) => {
   )
     .then((user) => {
       if (!user) {
-        throw new NoIdFoundError('Пользователь по указанному _id не найден.');
+        throw new NoIdFoundError('Пользователь по указанному id не найден.');
       }
       res
         .status(201)
@@ -80,7 +80,7 @@ module.exports.updateUsersProfileById = (req, res, next) => {
           if (err.name === 'ValidationError') {
             next(new CastError('Переданы некорректные данные при обновлении профиля.'));
           } else if (err.message === 'NoIdFound') {
-            next(new NoIdFoundError('Пользователь по указанному _id не найден.'));
+            next(new NoIdFoundError('Пользователь по указанному id не найден.'));
           } else {
             next(err);
           }
@@ -102,7 +102,7 @@ module.exports.updateUsersAvatarById = (req, res, next) => {
     })
     .catch((err) => {
       if (err.message === 'NoIdFound') {
-        next(new NoIdFoundError('Пользователь по указанному _id не найден.'));
+        next(new NoIdFoundError('Пользователь по указанному id не найден.'));
       } else {
         next(err);
       }
@@ -117,13 +117,13 @@ module.exports.login = (req, res, next) => {
     .select('+password')
     .then((user) => {
       if (!user) {
-        return Promise.reject(new Error('Неправильные почта или пароль'));
+        next(new AuthError('Неправильные почта или пароль'));
       }
       bcrypt.compare(password, user.password)
         // eslint-disable-next-line consistent-return
         .then((matched) => { // boolean
           if (!matched) {
-            return Promise.reject(new Error('Неправильные почта или пароль'));
+            next(new AuthError('Неправильные почта или пароль'));
           }
           const token = jwt.sign(
             { _id: user._id },

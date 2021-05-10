@@ -25,6 +25,9 @@ app.post('/signin', express.json(), login);
 app.use(auth);
 app.use('/users', users);
 app.use('/cards', cards);
+app.use('*', (req, res, next) => {
+  next(new NoFoundError('Запрашиваемая страница не найдена.'));
+});
 
 app.use(errors());
 app.use((err, req, res, next) => {
@@ -32,10 +35,6 @@ app.use((err, req, res, next) => {
   res.status(statusCode).send({
     message: statusCode === 500 ? 'Ошибка сервера.' : message,
   });
-});
-
-app.use((req, res, next) => {
-  next(new NoFoundError('Страница не найдена.'));
 });
 
 app.listen(PORT, () => {

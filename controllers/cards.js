@@ -1,5 +1,7 @@
+/* eslint-disable consistent-return */
 const Card = require('../models/card');
 const CastError = require('../errors/CastError'); // 400
+const ForbiddenError = require('../errors/ForbiddenError'); // 403
 const NoIdFoundError = require('../errors/NoIdFoundError'); // 404
 
 module.exports.getAllCards = (req, res, next) => {
@@ -31,28 +33,29 @@ module.exports.deleteCard = (req, res, next) => {
   const { cardId } = req.params;
   const userId = req.user._id;
   Card.findById(cardId)
-    // eslint-disable-next-line consistent-return
     .then((card) => {
-      if (card.owner._id.toString() !== userId) {
-        return Promise.reject(
-          new CastError('Вы можете удалить только свою карточку.'),
-        );
-      } Card.findByIdAndRemove(cardId)
+      if (!card) {
+        next(new NoIdFoundError('Карточка с таким id не найдена'));
+      } else if (card.owner._id.toString() !== userId) {
+        next(new ForbiddenError('Вы можете удалить только свою карточку.'));
+      } else {
+        Card.findByIdAndRemove(cardId)
         // eslint-disable-next-line no-shadow
-        .then((card) => {
-          if (!card) {
-            next(new NoIdFoundError('Карточка с указанным _id не найдена.'));
-          }
-          res.send({ card });
-        })
-        .catch((err) => {
-          if (err.name === 'CastError') {
-            next(new CastError('Введены некорректные данные.'));
-          } else {
-            next(err);
-          }
-        });
-    });
+          .then((card) => {
+            if (!card) {
+              next(new NoIdFoundError('Карточка с таким id не найдена'));
+            }
+            res.send({ card });
+          })
+          .catch((err) => {
+            if (err.name === 'CastError') {
+              next(new CastError('Введены некорректные данные.'));
+            } else {
+              next(err);
+            }
+          });
+      }
+    }).catch(next);
 };
 
 module.exports.likeCard = (req, res, next) => {
@@ -64,7 +67,8 @@ module.exports.likeCard = (req, res, next) => {
     .then((card) => {
       if (!card) {
         next(new NoIdFoundError('Карточка с указанным _id не найдена.'));
-      } res.send(card);
+      }
+      res.send(card);
     })
     .catch((err) => {
       if (err.name === 'CastError') {
@@ -94,7 +98,9 @@ module.exports.dislikeCard = (req, res, next) => {
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        next(new CastError('Переданы некорректные данные для постанови лайка.'));
+        next(
+          new CastError('Переданы некорректные данные для постанови лайка.'),
+        );
       } else if (err.message === 'NotFound') {
         next(new NoIdFoundError('Карточка с указанным _id не найдена.'));
       } else {
